@@ -15,6 +15,8 @@ Ask questions in natural language. Get interactive charts. Explore the EU econom
 
 **[→ Live Demo](https://insightstream.edoedoedo.it)**
 
+![InsightStream Preview](public/preview.png)
+
 </div>
 
 ---
