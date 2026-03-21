@@ -105,37 +105,39 @@ EuroRecord[] — normalized, validated with Zod
 
 ---
 
-## Quick Start
+## Setup
 
 ```bash
-# 1. Clone and install
-git clone https://github.com/your-username/insightstream.git
+git clone https://github.com/edoedoedo/insightstream.git
 cd insightstream
 npm install
-
-# 2. Configure environment
-cp .env.example .env.local
-# Edit .env.local — at minimum, add GROQ_API_KEY
-
-# 3. Run tests
-npm test
-
-# 4. Run development server
-npm run dev
-# Open http://localhost:3000
 ```
 
----
+Create `.env.local`:
 
-## Environment Variables
+```bash
+# At least one AI provider required (all free tier, no credit card needed)
+GROQ_API_KEY=                      # https://console.groq.com/keys
+MISTRAL_API_KEY=                   # https://console.mistral.ai/api-keys (optional)
+GOOGLE_GENERATIVE_AI_API_KEY=      # https://aistudio.google.com/app/apikey (optional)
+
+# Eurostat requires no API key
+```
+
+```bash
+npm test        # Run all 40 tests
+npm run dev     # Start dev server
+```
+
+Visit `http://localhost:3000/api/chat` to verify API health, then `http://localhost:3000` to start.
+
+> **Rate limits:** all providers are free tier. If one stops responding, switch model from the ⓘ panel.
 
 | Variable                       | Required    | Provider                                           | Free Tier                   |
 | ------------------------------ | ----------- | -------------------------------------------------- | --------------------------- |
 | `GROQ_API_KEY`                 | ✅ Required | [console.groq.com](https://console.groq.com)       | 30 req/min · 14,400 req/day |
 | `MISTRAL_API_KEY`              | Optional    | [console.mistral.ai](https://console.mistral.ai)   | 1B tokens/month             |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Optional    | [aistudio.google.com](https://aistudio.google.com) | 15 req/min                  |
-
-All AI providers are **free tier** — no credit card required for basic usage. Eurostat requires no API key.
 
 ---
 
@@ -173,9 +175,8 @@ insightstream/
 │   ├── layout.tsx
 │   └── page.tsx                       # Main dashboard: orchestration, layout, state wiring
 ├── __tests__/
-│   ├── eurostat-client.test.ts        # 30 tests: parser, validator, formatter, period converter
+│   ├── eurostat-client.test.ts        # 29 tests: parser, validator, formatter, period converter
 │   └── suggestion-parser.test.ts      # 11 tests: fenced blocks, raw JSON, fallback, edge cases
-├── .env.example
 ├── vitest.config.ts
 ├── next.config.ts
 ├── tailwind.config.ts
