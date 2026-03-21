@@ -29,7 +29,7 @@ export const EuroIndicatorSchema = z.enum([
 export type EuroIndicator = z.infer<typeof EuroIndicatorSchema>;
 
 export const EuroRecordSchema = z.object({
-  country:   z.string().length(2),   // ISO 3166-1 alpha-2
+  country:   z.string().min(2).max(12),   // ISO alpha-2 or aggregate codes (EU27_2020, EA20)
   countryLabel: z.string(),
   indicator: EuroIndicatorSchema,
   value:     z.number().finite(),
@@ -180,7 +180,7 @@ interface JsonStatDimension {
   };
 }
 
-interface JsonStatResponse {
+export interface JsonStatResponse {
   class:  string;
   label:  string;
   value:  (number | null)[];
@@ -204,7 +204,7 @@ interface JsonStatResponse {
  * the previous formula geoPos*strides[geo] + timePos*strides[time] would
  * land on THS_PER values (~1258 thousand) instead of PC_ACT values (~8.1%).
  */
-function parseJsonStat(
+export function parseJsonStat(
   raw: JsonStatResponse,
   indicator: EuroIndicator,
   requestedCountries: string[]
@@ -325,7 +325,7 @@ export interface FetchOptions {
  *   semi-annual  → 4 observations
  *   annual       → 2 observations
  */
-function monthsToObservations(months: number, frequency: IndicatorConfig["frequency"]): number {
+export function monthsToObservations(months: number, frequency: IndicatorConfig["frequency"]): number {
   switch (frequency) {
     case "monthly":     return months;
     case "quarterly":   return Math.ceil(months / 3);

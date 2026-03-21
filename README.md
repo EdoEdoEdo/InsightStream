@@ -7,10 +7,11 @@
 Real-time macroeconomic analysis powered by Eurostat live data and generative AI.
 Ask questions in natural language. Get interactive charts. Explore the EU economy.
 
-[![Next.js](https://img.shields.io/badge/Next.js-15.1-black?logo=next.js)](https://nextjs.org)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5-black?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?logo=typescript)](https://typescriptlang.org)
 [![Vercel AI SDK](https://img.shields.io/badge/Vercel_AI_SDK-4.x-black?logo=vercel)](https://sdk.vercel.ai)
 [![Eurostat](https://img.shields.io/badge/Data-Eurostat_Live-003399?logo=europeanunion)](https://ec.europa.eu/eurostat)
+[![Vitest](https://img.shields.io/badge/Tests-Vitest-6E9F18?logo=vitest)](https://vitest.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 **[→ Live Demo](https://insightstream.edoedoedo.it)**
@@ -83,6 +84,8 @@ EuroRecord[] — normalized, validated with Zod
 | **JSON-stat stride parser**             | Eurostat returns multi-dimensional data cubes. Custom stride-based index calculation handles arbitrary dimension ordering without hardcoded assumptions. |
 | **Frequency-aware period conversion**   | `lastTimePeriod=48` means different things for monthly vs semi-annual data. `monthsToObservations()` normalizes user input to correct API observations.  |
 | **Multi-provider model registry**       | Single `models.ts` file drives both the UI switcher and backend routing. Adding a new provider = 1 entry in the registry + 1 line in `resolveModel()`.   |
+| **Modular component architecture**      | `page.tsx` orchestrates; each UI concern lives in a dedicated file. Chat input uses `forwardRef` for programmatic submit — no DOM queries.                |
+| **Fallback suggestion chips**           | When AI stream is truncated (rate limit), chips are derived from tool result data so the user is never left at a dead end.                                |
 
 ---
 
@@ -90,14 +93,15 @@ EuroRecord[] — normalized, validated with Zod
 
 | Layer                | Technology                                                                                          |
 | -------------------- | --------------------------------------------------------------------------------------------------- |
-| **Framework**        | Next.js 15 (App Router) + TypeScript strict mode                                                    |
+| **Framework**        | Next.js 15.5 (App Router) + TypeScript strict mode                                                  |
 | **AI Orchestration** | Vercel AI SDK v4 — `streamText`, Tool Calling, `toDataStreamResponse`                               |
 | **AI Providers**     | Groq (llama-3.3-70b, llama-3.1-8b) · Mistral AI (mistral-small) · Google AI (gemini-2.0-flash-lite) |
 | **Data Source**      | Eurostat Statistics REST API — JSON-stat format                                                     |
 | **Data Validation**  | Zod schemas for all API responses and tool parameters                                               |
 | **Visualization**    | Recharts (time series) · D3-geo (EU choropleth map)                                                 |
-| **UI**               | Tailwind CSS · Framer Motion · DM Mono + Syne (Google Fonts)                                        |
+| **UI**               | Tailwind CSS · Framer Motion · DM Mono + Syne (next/font)                                           |
 | **Export**           | jsPDF + html2canvas                                                                                 |
+| **Testing**          | Vitest (40 unit tests covering parsers, validators, and formatters)                                  |
 
 ---
 
@@ -113,7 +117,10 @@ npm install
 cp .env.example .env.local
 # Edit .env.local — at minimum, add GROQ_API_KEY
 
-# 3. Run development server
+# 3. Run tests
+npm test
+
+# 4. Run development server
 npm run dev
 # Open http://localhost:3000
 ```
@@ -139,29 +146,59 @@ insightstream/
 ├── app/
 │   ├── api/
 │   │   ├── chat/
-│   │   │   └── route.ts          # AI backend: model routing, Tool Calling, streaming
+│   │   │   └── route.ts              # AI backend: model routing, Tool Calling, streaming
 │   │   └── eurostat/
-│   │       └── route.ts          # Eurostat proxy: CORS bypass, edge caching
+│   │       └── route.ts              # Eurostat proxy: CORS bypass, edge caching
 │   ├── components/
 │   │   ├── ai/
-│   │   │   ├── EconomicChart.tsx  # Generative UI: multi-country time series (Recharts)
-│   │   │   ├── EuroMap.tsx        # Interactive EU choropleth map (D3-geo + React SVG)
-│   │   │   └── EurostatChart.tsx     # Shared primitives: Skeleton + ErrorBoundary
+│   │   │   ├── EconomicChart.tsx      # Generative UI: multi-country time series (Recharts)
+│   │   │   ├── EuroMap.tsx            # Interactive EU choropleth map (D3-geo + React SVG)
+│   │   │   └── EurostatChart.tsx      # Shared primitives: Skeleton + ErrorBoundary
+│   │   ├── chat/
+│   │   │   ├── ChatInput.tsx          # Bottom input bar with forwardRef (programmatic submit)
+│   │   │   ├── HeroMetrics.tsx        # Top KPI cards (4 Italian indicators)
+│   │   │   └── MessageBubble.tsx      # Chat bubbles, tool rendering, fallback chips
+│   │   ├── onboarding/
+│   │   │   └── OnboardingModal.tsx    # First-visit 4-slide onboarding flow
 │   │   └── ui/
-│   │       ├── ExportButton.tsx   # PDF export (jspdf + html2canvas)
-│   │       ├── InfoPanel.tsx      # Slide-in panel: About / Data sources / Model switcher
-│   │       └── SuggestionChips.tsx # Contextual follow-up chips (parsed from AI stream)
+│   │       ├── ExportButton.tsx       # PDF export (jspdf + html2canvas)
+│   │       ├── InfoPanel.tsx          # Slide-in panel: About / Data sources / Model switcher
+│   │       └── SuggestionChips.tsx    # Contextual follow-up chips (parsed from AI stream)
+│   ├── lib/
+│   │   └── design-tokens.ts          # Centralized color and design token constants
 │   ├── utils/
-│   │   ├── eurostat-client.ts     # JSON-stat parser, 10 indicators, in-memory cache
-│   │   └── models.ts              # AI model registry (single source of truth)
+│   │   ├── eurostat-client.ts         # JSON-stat parser, 10 indicators, in-memory cache
+│   │   └── models.ts                  # AI model registry (single source of truth)
 │   ├── globals.css
 │   ├── layout.tsx
-│   └── page.tsx                   # Main dashboard: chat, map, hero metrics, onboarding
+│   └── page.tsx                       # Main dashboard: orchestration, layout, state wiring
+├── __tests__/
+│   ├── eurostat-client.test.ts        # 30 tests: parser, validator, formatter, period converter
+│   └── suggestion-parser.test.ts      # 11 tests: fenced blocks, raw JSON, fallback, edge cases
 ├── .env.example
+├── vitest.config.ts
 ├── next.config.ts
 ├── tailwind.config.ts
 └── tsconfig.json
 ```
+
+---
+
+## Testing
+
+The project includes a comprehensive test suite powered by **Vitest** covering all critical data processing logic.
+
+```bash
+npm test              # Run all 40 tests
+npm run test:watch    # Watch mode during development
+```
+
+### Test Coverage
+
+| Module                  | Tests | What's covered                                                                                       |
+| ----------------------- | ----- | ---------------------------------------------------------------------------------------------------- |
+| `eurostat-client.ts`    | 29    | `parseJsonStat` (multi-dim cubes, EU27 aggregates, null handling), `monthsToObservations`, `formatPeriod`, `EuroRecordSchema` validation |
+| `SuggestionChips.tsx`   | 11    | `parseSuggestions` (fenced blocks, raw JSON, partial/malformed JSON, fallback priority, edge cases)  |
 
 ---
 
@@ -203,7 +240,7 @@ The model registry (`app/utils/models.ts`) is the single source of truth. Each e
 | `mistral-small-latest`    | Mistral AI | European model, strong multilingual, 1B free tokens/month        |
 | `gemini-2.0-flash-lite`   | Google AI  | Ultra-fast, good tool calling support                            |
 
-> **Rate limits:** if one provider stops responding, switch model from the ⓘ InfoPanel. Each provider has independent rate limits.
+> **Rate limits:** if one provider stops responding, the error message will suggest switching model from the ⓘ InfoPanel. Each provider has independent rate limits.
 
 ### Adding a New Model/Provider
 
@@ -304,6 +341,9 @@ npm start
 npm run dev          # Start dev server (http://localhost:3000)
 npm run build        # Production build + type check
 npm run lint         # ESLint
+npm test             # Run all 40 tests (Vitest)
+npm run test:watch   # Watch mode
+npm run type-check   # TypeScript strict check (no emit)
 ```
 
 ### Architecture Principles
@@ -313,6 +353,10 @@ npm run lint         # ESLint
 - **Tool-first AI** — AI never answers data questions without calling a tool first (enforced via system prompt)
 - **Error isolation** — every chart wrapped in `ErrorBoundary`; tool failures return empty records gracefully
 - **Indicator-aware semantics** — delta colors account for direction (↑ unemployment = red, ↑ GDP = green)
+- **Unit-aware formatting** — symbol units (%, €/kWh) attach directly; word units (indice, punti) are spaced or omitted on axes
+- **Modular components** — `page.tsx` is an orchestrator (~500 lines); all UI concerns extracted to dedicated files
+- **Graceful degradation** — rate limit errors suggest model switching; fallback chips generated from tool data when AI stream is cut
+- **Tested core logic** — 40 unit tests covering JSON-stat parsing, Zod validation, period conversion, and suggestion extraction
 
 ---
 
@@ -328,5 +372,7 @@ All economic data is sourced from **[Eurostat](https://ec.europa.eu/eurostat)** 
 <div align="center">
 
 Built with Next.js · Vercel AI SDK · Eurostat · Groq · Framer Motion
+
+A project by [*~~EDOEDOEDO~~*](https://www.edoedoedo.it/)
 
 </div>

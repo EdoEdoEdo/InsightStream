@@ -346,6 +346,7 @@ export function ExportButton({
       disabled={isLoading}
       aria-label={STATE_LABELS[state]}
       aria-busy={isLoading}
+      whileHover={!isLoading ? { filter: "brightness(1.3)" } : undefined}
       whileTap={!isLoading ? { scale: 0.95 } : undefined}
       className="flex items-center gap-2 rounded-lg px-3 py-1.5 transition-all duration-200 disabled:cursor-wait"
       style={{
@@ -356,16 +357,6 @@ export function ExportButton({
         fontFamily: "'DM Mono', monospace",
         letterSpacing: "0.04em",
         minWidth: "fit-content",
-      }}
-      onMouseEnter={(e) => {
-        if (!isLoading) {
-          (e.currentTarget as HTMLButtonElement).style.background = `${accentColor}20`;
-          (e.currentTarget as HTMLButtonElement).style.borderColor = `${accentColor}45`;
-        }
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = `${accentColor}12`;
-        (e.currentTarget as HTMLButtonElement).style.borderColor = `${accentColor}28`;
       }}
     >
       {/* Animated icon */}

@@ -23,6 +23,9 @@ export interface Suggestion {
 /**
  * Extracts suggestions from AI message content.
  * Returns { cleanText, suggestions } — cleanText has the block removed.
+ *
+ * IMPORTANT: Only call this when streaming is complete (isLoading === false).
+ * During streaming, partial JSON can match rawRegex and cause render errors.
  */
 export function parseSuggestions(content: string): {
   cleanText:   string;
@@ -41,7 +44,7 @@ export function parseSuggestions(content: string): {
     try {
       const parsed = JSON.parse(fencedMatch[1].trim());
       suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
-    } catch { /* ignore */ }
+    } catch { /* ignore malformed JSON */ }
     cleanText = content.replace(fencedRegex, "").trimEnd();
     return { cleanText, suggestions };
   }
@@ -51,14 +54,17 @@ export function parseSuggestions(content: string): {
     try {
       const parsed = JSON.parse(rawMatch[0]);
       suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
-    } catch { /* ignore */ }
+    } catch { /* ignore malformed JSON */ }
     cleanText = content.replace(rawRegex, "").trimEnd();
-    // Also strip any trailing label like {suggestions or similar artifacts
+    // Strip trailing partial JSON artifacts
     cleanText = cleanText.replace(/\{\s*suggestions?\s*$/i, "").trimEnd();
     return { cleanText, suggestions };
   }
 
-  return { cleanText: content, suggestions: [] };
+  // No complete suggestion block found — still strip partial JSON artifacts
+  // from truncated streams (e.g. "{suggestions" at end of cut response)
+  const stripped = content.replace(/\{\s*"?suggestions?"?\s*:?[^}]*$/i, "").trimEnd();
+  return { cleanText: stripped || content, suggestions: [] };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -91,29 +97,9 @@ export const SuggestionChips = memo(function SuggestionChips({
           transition={{ duration: 0.2, delay: 0.1 + i * 0.06 }}
           onClick={() => !isLoading && onSelect(s.prompt)}
           disabled={isLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs
-                     transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            background:  "rgba(0,212,255,0.06)",
-            border:      "1px solid rgba(0,212,255,0.2)",
-            color:       "rgba(255,255,255,0.6)",
-            fontFamily:  "'DM Mono', monospace",
-            fontSize:    "10px",
-            letterSpacing: "0.02em",
-          }}
-          onMouseEnter={(e) => {
-            if (isLoading) return;
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,212,255,0.12)";
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(0,212,255,0.4)";
-            (e.currentTarget as HTMLButtonElement).style.color = "#fff";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,212,255,0.06)";
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(0,212,255,0.2)";
-            (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.6)";
-          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-[10px] tracking-[0.02em] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-[rgba(0,212,255,0.06)] border border-[rgba(0,212,255,0.2)] text-white/60 hover:bg-[rgba(0,212,255,0.12)] hover:border-[rgba(0,212,255,0.4)] hover:text-white"
         >
-          <span style={{ color: "#00d4ff", fontSize: "9px" }}>→</span>
+          <span className="text-[#00d4ff] text-[9px]">→</span>
           {s.label}
         </motion.button>
       ))}

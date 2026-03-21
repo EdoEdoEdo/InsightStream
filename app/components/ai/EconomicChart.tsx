@@ -23,6 +23,23 @@ import { formatPeriod } from "@/app/utils/eurostat-client";
 const HIGHER_IS_BAD = new Set([
   "unemployment", "public_debt", "energy_prices", "neet_youth", "inflation"
 ]);
+
+// ─── Unit formatting ──────────────────────────────────────────────────────────
+
+/** Symbol units (%, €/kWh) attach directly; word units (indice, punti) need a space */
+const SYMBOL_UNITS = new Set(["%", "€/kWh"]);
+
+function formatValueUnit(value: string | number, unit: string): string {
+  if (SYMBOL_UNITS.has(unit)) return `${value}${unit}`;
+  return `${value} ${unit}`;
+}
+
+/** Y-axis: show symbol units inline, skip word units (already in chart header) */
+function formatAxisTick(v: number, unit: string): string {
+  if (SYMBOL_UNITS.has(unit)) return `${v}${unit}`;
+  return `${v}`;
+}
+
 import { ExportButton } from "@/app/components/ui/ExportButton";
 
 // ─── Country color palette ────────────────────────────────────────────────────
@@ -126,7 +143,7 @@ function CustomTooltip({
               className="font-mono text-sm font-semibold tabular-nums"
               style={{ color: entry.color }}
             >
-              {entry.value?.toFixed(2)}{unit}
+              {formatValueUnit(entry.value?.toFixed(2) ?? "", unit)}
             </span>
           </div>
         );
@@ -160,10 +177,7 @@ function CountrySummary({
   }).filter((c) => c.last);
 
   return (
-    <div
-      className="grid gap-2"
-      style={{ gridTemplateColumns: `repeat(${Math.min(latest.length, 4)}, 1fr)` }}
-    >
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
       {latest.map(({ code, last, delta, color }) => (
         <div
           key={code}
@@ -180,7 +194,7 @@ function CountrySummary({
             className="font-mono text-base font-semibold tabular-nums"
             style={{ color }}
           >
-            {last.value.toFixed(2)}{unit}
+            {formatValueUnit(last.value.toFixed(2), unit)}
           </p>
           {delta !== null && (
             <p
@@ -192,7 +206,7 @@ function CountrySummary({
               }}
             >
               {delta > 0 ? "↑" : delta < 0 ? "↓" : "—"}{" "}
-              {Math.abs(delta).toFixed(2)}{unit}
+              {formatValueUnit(Math.abs(delta).toFixed(2), unit)}
             </p>
           )}
           <p className="font-mono text-[9px] text-white/25 mt-0.5">
@@ -259,9 +273,9 @@ export const EconomicChart = memo(function EconomicChart({
         style={{ background: `linear-gradient(90deg, transparent, ${accentColor}60, transparent)` }}
       />
 
-      <div className="p-6 space-y-5">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <div
@@ -274,7 +288,7 @@ export const EconomicChart = memo(function EconomicChart({
                 <span className="font-mono text-[9px] text-white/20">cache</span>
               )}
             </div>
-            <h3 className="text-xl font-semibold text-white tracking-tight">
+            <h3 className="text-lg sm:text-xl font-semibold text-white tracking-tight">
               {indicatorLabel}
             </h3>
             <p className="font-mono text-xs text-white/30 mt-0.5">
@@ -297,7 +311,7 @@ export const EconomicChart = memo(function EconomicChart({
             </p>
           </div>
         ) : hasSinglePeriod ? (
-          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(countries.length, 4)}, 1fr)` }}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {countries.map((code, i) => {
               const rec = records.find((r) => r.country === code);
               if (!rec) return null;
@@ -309,7 +323,7 @@ export const EconomicChart = memo(function EconomicChart({
                     <span className="font-mono text-[9px] uppercase tracking-widest text-white/40">{rec.countryLabel}</span>
                   </div>
                   <p className="font-mono text-xl font-bold tabular-nums" style={{ color }}>
-                    {rec.value.toFixed(2)}{unit}
+                    {formatValueUnit(rec.value.toFixed(2), unit)}
                   </p>
                   <p className="font-mono text-[9px] text-white/25 mt-1">{formatPeriod(rec.period)}</p>
                 </div>
@@ -319,9 +333,9 @@ export const EconomicChart = memo(function EconomicChart({
         ) : (
           <>
             {/* Multi-line chart */}
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={200}>
               {hasNegative ? (
-                <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
                   <defs>
                     {countries.map((code, i) => {
                       const color = getCountryColor(code, i);
@@ -335,7 +349,7 @@ export const EconomicChart = memo(function EconomicChart({
                   </defs>
                   <CartesianGrid stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
                   <XAxis dataKey="periodLabel" {...axisProps} interval="preserveStartEnd" />
-                  <YAxis {...axisProps} tickFormatter={(v: number) => `${v}${unit}`} width={58} />
+                  <YAxis {...axisProps} tickFormatter={(v: number) => formatAxisTick(v, unit)} width={58} />
                   <Tooltip content={<CustomTooltip unit={unit} records={records} />} />
                   <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeWidth={1} />
                   {countries.map((code, i) => {
@@ -356,10 +370,10 @@ export const EconomicChart = memo(function EconomicChart({
                   })}
                 </AreaChart>
               ) : (
-                <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <LineChart data={chartData} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
                   <CartesianGrid stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
                   <XAxis dataKey="periodLabel" {...axisProps} interval="preserveStartEnd" />
-                  <YAxis {...axisProps} tickFormatter={(v: number) => `${v}${unit}`} width={58} />
+                  <YAxis {...axisProps} tickFormatter={(v: number) => formatAxisTick(v, unit)} width={58} />
                   <Tooltip content={<CustomTooltip unit={unit} records={records} />} />
                   {countries.map((code, i) => {
                     const color = getCountryColor(code, i);

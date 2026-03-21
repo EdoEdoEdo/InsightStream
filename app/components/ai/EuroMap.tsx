@@ -112,15 +112,12 @@ function IndicatorSelector({
               <button
                 key={ind}
                 onClick={() => { onChange(ind); setOpen(false); }}
-                className="w-full text-left px-4 py-2.5 transition-all duration-100 flex items-center gap-2"
-                style={{
-                  background: value === ind ? "rgba(0,212,255,0.08)" : "transparent",
-                  color: value === ind ? "#00d4ff" : "rgba(255,255,255,0.55)",
-                  fontSize: "11px",
-                  fontFamily: "'DM Mono', monospace",
-                }}
-                onMouseEnter={(e) => { if (value !== ind) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)"; }}
-                onMouseLeave={(e) => { if (value !== ind) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                className={`w-full text-left px-4 py-2.5 transition-all duration-100 flex items-center gap-2
+                  font-mono text-[11px]
+                  ${value === ind
+                    ? "bg-[rgba(0,212,255,0.08)] text-[#00d4ff]"
+                    : "bg-transparent text-white/55 hover:bg-white/[0.04]"
+                  }`}
               >
                 {value === ind && <div className="w-1 h-1 rounded-full bg-cyan-400 shrink-0" />}
                 {INDICATORS[ind].label}
